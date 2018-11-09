@@ -33,6 +33,8 @@ function lock {
   let _counter=1
   while ! mkdir ${_LOCK_DIR} &>/dev/null; do
     if [ ${_counter} -gt ${_MAX_WAIT_TIME} ]; then
+      kill -SIGKILL ${_ALARM_GENERATOR_PID} &>/dev/null
+      exit
       break
     fi
     let _counter+=1
