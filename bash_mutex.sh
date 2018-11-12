@@ -12,22 +12,18 @@
 # Check for the input parameters
 if [ $# -eq 0 ]; then
   echo ""
-  echo "Usage: bash_mutex.sh [-n <max_queue_length] \"command to run in a semaphore-like manner\""
+  echo "Usage: bash_mutex.sh [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time] \"command to run in a semaphore-like manner\""
   echo ""
   echo "Example: bash_mutex.sh 'echo $$ >> /tmp/test'"
   echo "Example: bash_mutex.sh -n 3 'echo $$ >> /tmp/test'"
+  echo "Example: bash_mutex.sh -ml 60 'echo $$ >> /tmp/test'"
+  echo "Example: bash_mutex.sh -mw 30 'echo $$ >> /tmp/test'"
+  echo "Example: bash_mutex.sh -n 3 -ml 60 -mw 30 'echo $$ >> /tmp/test'"
   echo ""
   exit
 fi
 
-# By default, no limit on number of processes waiting for the mutex.
-let _MAX_QUEUE_LEN=0
-# Set it to ${2} if "-n" is the first argument
-if [ "${1}" == "-n" ]; then
-  _MAX_QUEUE_LEN=${2}
-  shift
-  shift
-fi
+### Variables
 
 # Lock directory
 _LOCK_DIR="/var/tmp/bash_mutex.lck"
@@ -36,8 +32,38 @@ _LOCK_DIR="/var/tmp/bash_mutex.lck"
 _MAX_LOCK_TIME=5
 # Maximum time we'll wait for the lock (in seconds)
 _MAX_WAIT_TIME=60
+# By default, no limit on number of processes waiting for the mutex.
+let _MAX_QUEUE_LEN=0
+
+# Set it to ${2} if "-n" is the first argument
+while [ "${1#-}" != "${1}" ]; do
+  case "${1}" in
+    "-ml")
+          _MAX_LOCK_TIME=${2}
+          shift
+          shift
+          ;;
+    "-mw")
+          _MAX_WAIT_TIME=${2}
+          shift
+          shift
+          ;;
+    "-n")
+          _MAX_QUEUE_LEN=${2}
+          shift
+          shift
+          ;;
+  esac
+done
+
+echo "_MAX_LOCK_TIME = ${_MAX_LOCK_TIME}"
+echo "_MAX_WAIT_TIME = ${_MAX_WAIT_TIME}"
+echo "_MAX_QUEUE_LEN = ${_MAX_QUEUE_LEN}"
+
 # Sum the time to wait for (get the lock + being locked)
 let _SUM_LOCK_TIME=_MAX_LOCK_TIME+_MAX_WAIT_TIME
+
+### Functions
 
 function clean_exit {
   # remove us from the queue
