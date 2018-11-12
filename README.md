@@ -8,5 +8,8 @@ This script is intended to execute commands from the bash in a mutex-like way.
 #
 # Example: bash_mutex.sh 'echo $$ >> /tmp/test'
 # Example: bash_mutex.sh -n 3 'echo $$ >> /tmp/test'
+# Example: bash_mutex.sh -ml 60 'echo $$ >> /tmp/test'"
+# Example: bash_mutex.sh -mw 30 'echo $$ >> /tmp/test'"
+# Example: bash_mutex.sh -n 3 -ml 60 -mw 30 'echo $$ >> /tmp/test'"
 #
 ```
