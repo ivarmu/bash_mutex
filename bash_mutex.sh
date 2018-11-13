@@ -89,8 +89,12 @@ let _SUM_LOCK_TIME=_MAX_LOCK_TIME+_MAX_WAIT_TIME
 function clean_exit {
   # remove us from the queue
   rmdir ${_LOCK_DIR}_$$ &>/dev/null
-  if [ ! -z "$(pstree -p ${_ALARM_GENERATOR_PID})" ]; then
-    kill -SIGKILL ${_ALARM_GENERATOR_PID} &>/dev/null
+  # Can remove the auto-unlock timer and all it's childs
+  _procs="$(pstree -p ${_ALARM_GENERATOR_PID} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
+  if [ ! -z "${_procs}" ]; then
+    for _pid in ${_procs}; do
+      kill -SIGTERM ${_pid} &>/dev/null
+    done
   fi
   exit ${1:-0}
 }
@@ -123,18 +127,32 @@ function unlock {
   # first of all, get out of the queue to let another process to get the slot
   rmdir ${_LOCK_DIR}_$$ &>/dev/null
   rmdir ${_LOCK_DIR} &>/dev/null
-  # Can remove the auto-unlock timer
-  if [ ! -z "$(pstree -p ${_ALARM_GENERATOR_PID})" ]; then
-    kill -SIGKILL ${_ALARM_GENERATOR_PID} &>/dev/null
+  # Can remove the auto-unlock timer and all it's childs
+  _procs="$(pstree -p ${_ALARM_GENERATOR_PID} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
+  if [ ! -z "${_procs}" ]; then
+    for _pid in ${_procs}; do
+      kill -${1} ${_pid} &>/dev/null
+    done
+  fi
+  # Can remove the running process and all it's childs
+  _procs="$(pstree -p ${_COMMAND} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
+  if [ ! -z "${_procs}" ]; then
+    for _pid in ${_procs}; do
+      kill -${1} ${_pid} &>/dev/null
+    done
   fi
 }
 
 # Configure SIGALRM handler
 function unlock_signal {
-  unlock
+  unlock ${1}
   exit 3
 }
-trap unlock_signal ALRM
+
+trap 'unlock_signal ALRM' ALRM
+trap 'unlock_signal INT' INT
+trap 'unlock_signal TERM' TERM
+trap 'unlock_signal HUP' HUP
 
 # Program auto-unlock
 (sleep ${_SUM_LOCK_TIME}; kill -SIGALRM $$ &>/dev/null; exit 0)&
@@ -146,13 +164,17 @@ lock
 # MAIN process
 echo "executing the given command: $@"
 date
-eval $@
+eval $@ &
+_COMMAND=$!
+wait ${_COMMAND}
 
 # MAIN process finished
 # Release the lock
 unlock
 
 # Kill the auto-unlocker sub-shell before regular exit
-kill -SIGKILL ${_ALARM_GENERATOR_PID} &>/dev/null
+#if [ ! -z "$(pstree -p ${_ALARM_GENERATOR_PID})" ]; then
+#  kill -SIGKILL ${_ALARM_GENERATOR_PID} &>/dev/null
+#fi
 
 exit 0
