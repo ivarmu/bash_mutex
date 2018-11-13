@@ -29,13 +29,16 @@ if [ $# -eq 0 ]; then
   echo "  2: Missing required parameter '-m'"
   echo "  3: SIGALRM received. The command is killed"
   echo ""
+  echo "Environment variables:"
+  echo "  LOCK_PATH: Indicates where to create the mutexes (default: /var/tmp/)"
+  echo ""
   exit 1
 fi
 
 ### Variables
 
 # Lock directory
-_LOCK_PATH="/var/tmp"
+_LOCK_PATH="${LOCK_PATH:-/var/tmp}"
 _MUTEX_PREFIX="bash_mutex_"
 _MUTEX_NAME=""
 
