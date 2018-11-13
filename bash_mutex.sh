@@ -48,7 +48,7 @@ let _MAX_QUEUE_LEN=0
 
 # Parse arguments
 if [ "${1}" == "-m" ]; then
-  _MUTEX_NAME="${2}"
+  _MUTEX_NAME="${2/[[:space:]]/_}"
   shift
   shift
 else
