@@ -5,28 +5,39 @@
 # 
 # Usage: bash_mutex.sh [-n <max_queue_length>] "command to run in a semaphore-like manner"
 #
-# Example: bash_mutex.sh 'echo $$ >> /tmp/test'
-# Example: bash_mutex.sh -n 3 'echo $$ >> /tmp/test'
+# Example: bash_mutex.sh -m 'echo' 'echo $$ >> /tmp/test'"
+# Example: bash_mutex.sh -m 'echo2' -n 3 'echo $$ >> /tmp/test'"
+# Example: bash_mutex.sh -m 'mutex' -ml 60 'echo $$ >> /tmp/test'"
+# Example: bash_mutex.sh -m 'mutex2' -mw 30 'echo $$ >> /tmp/test'"
+# Example: bash_mutex.sh -m 'label1' -n 3 -ml 60 -mw 30 'echo $$ >> /tmp/test'"
 #
 
 # Check for the input parameters
 if [ $# -eq 0 ]; then
   echo ""
-  echo "Usage: bash_mutex.sh [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time] \"command to run in a semaphore-like manner\""
+  echo "Usage: bash_mutex.sh <-m 'mutex_name'> [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time] \"command to run in a semaphore-like manner\""
   echo ""
-  echo "Example: bash_mutex.sh 'echo $$ >> /tmp/test'"
-  echo "Example: bash_mutex.sh -n 3 'echo $$ >> /tmp/test'"
-  echo "Example: bash_mutex.sh -ml 60 'echo $$ >> /tmp/test'"
-  echo "Example: bash_mutex.sh -mw 30 'echo $$ >> /tmp/test'"
-  echo "Example: bash_mutex.sh -n 3 -ml 60 -mw 30 'echo $$ >> /tmp/test'"
+  echo "Example: bash_mutex.sh -m 'echo' 'echo $$ >> /tmp/test'"
+  echo "Example: bash_mutex.sh -m 'echo2' -n 3 'echo $$ >> /tmp/test'"
+  echo "Example: bash_mutex.sh -m 'mutex' -ml 60 'echo $$ >> /tmp/test'"
+  echo "Example: bash_mutex.sh -m 'mutex2' -mw 30 'echo $$ >> /tmp/test'"
+  echo "Example: bash_mutex.sh -m 'label1' -n 3 -ml 60 -mw 30 'echo $$ >> /tmp/test'"
   echo ""
-  exit
+  echo "Error codes:"
+  echo "  0: no errors"
+  echo "  1: Missing parameters"
+  echo "  2: Missing required parameter '-m'"
+  echo "  3: SIGALRM received. The command is killed"
+  echo ""
+  exit 1
 fi
 
 ### Variables
 
 # Lock directory
-_LOCK_DIR="/var/tmp/bash_mutex.lck"
+_LOCK_PATH="/var/tmp"
+_MUTEX_PREFIX="bash_mutex_"
+_MUTEX_NAME=""
 
 # Maximum amount of time to maintain the lock (in seconds)
 _MAX_LOCK_TIME=5
@@ -35,7 +46,15 @@ _MAX_WAIT_TIME=60
 # By default, no limit on number of processes waiting for the mutex.
 let _MAX_QUEUE_LEN=0
 
-# Set it to ${2} if "-n" is the first argument
+# Parse arguments
+if [ "${1}" == "-m" ]; then
+  _MUTEX_NAME="${2}"
+  shift
+  shift
+else
+  echo "You must give a name for the mutex (-m)"
+  exit 2
+fi
 while [ "${1#-}" != "${1}" ]; do
   case "${1}" in
     "-ml")
@@ -56,6 +75,8 @@ while [ "${1#-}" != "${1}" ]; do
   esac
 done
 
+_LOCK_DIR="${_LOCK_PATH}/${_MUTEX_PREFIX}${_MUTEX_NAME}.lck"
+
 echo "_MAX_LOCK_TIME = ${_MAX_LOCK_TIME}"
 echo "_MAX_WAIT_TIME = ${_MAX_WAIT_TIME}"
 echo "_MAX_QUEUE_LEN = ${_MAX_QUEUE_LEN}"
@@ -71,7 +92,7 @@ function clean_exit {
   if [ ! -z "$(pstree -p ${_ALARM_GENERATOR_PID})" ]; then
     kill -SIGKILL ${_ALARM_GENERATOR_PID} &>/dev/null
   fi
-  exit
+  exit ${1:-0}
 }
 
 # Function to lock
@@ -111,12 +132,12 @@ function unlock {
 # Configure SIGALRM handler
 function unlock_signal {
   unlock
-  exit
+  exit 3
 }
 trap unlock_signal ALRM
 
 # Program auto-unlock
-(sleep ${_SUM_LOCK_TIME}; kill -SIGALRM $$ &>/dev/null; exit)&
+(sleep ${_SUM_LOCK_TIME}; kill -SIGALRM $$ &>/dev/null; exit 0)&
 _ALARM_GENERATOR_PID=$!
 
 # Get the lock
