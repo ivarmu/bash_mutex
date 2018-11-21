@@ -1,0 +1,16 @@
+---
+- name: reload_nfs_server
+  service:
+    name: nfs-server
+    state: reloaded
+  notify: restart_nfs_server_deps
+- name: restart_nfs_server_deps
+  service:
+    name: "{{ svc_loop }}"
+    state: restarted
+  loop:
+    - nfs-server
+    - rpcbind
+    - nfs-mountd
+  loop_control:
+    loop_var: svc_loop

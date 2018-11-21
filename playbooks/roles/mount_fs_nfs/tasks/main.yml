@@ -1,0 +1,29 @@
+---
+#
+# Required variables:
+# server: Server providing the nfs share
+# share_name: the name of the share
+# mount_point: path to mount the remote share to
+#
+# Optional variables:
+# proxy_url: Proxy URL to reach the Internet
+#
+- name: Ensure nfs-utils is installed
+  package:
+    name: nfs-utils
+    state: present
+  environment:
+    http_proxy: "{{ proxy_url | default('') }}"
+    https_proxy: "{{ proxy_url | default('') }}"
+    ftp_proxy: "{{ proxy_url | default('') }}"
+    socks_proxy: "{{ proxy_url | default('') }}"
+    HTTP_PROXY: "{{ proxy_url | default('') }}"
+    HTTPS_PROXY: "{{ proxy_url | default('') }}"
+    FTP_PROXY: "{{ proxy_url | default('') }}"
+    SOCKS_PROXY: "{{ proxy_url | default('') }}"
+- name: mount the nfs filesystem permanently
+  mount:
+    src: "{{ server }}:{{ share_name }}"
+    path: "{{ mount_point }}"
+    fstype: nfs
+    state: mounted

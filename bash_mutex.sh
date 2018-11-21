@@ -172,12 +172,7 @@ _COMMAND=$!
 wait ${_COMMAND}
 
 # MAIN process finished
-# Release the lock
+# Release the lock and exit
 unlock
-
-# Kill the auto-unlocker sub-shell before regular exit
-#if [ ! -z "$(pstree -p ${_ALARM_GENERATOR_PID})" ]; then
-#  kill -SIGKILL ${_ALARM_GENERATOR_PID} &>/dev/null
-#fi
 
 exit 0

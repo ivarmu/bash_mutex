@@ -1,0 +1,25 @@
+---
+#
+# Required variables:
+# config_file: Config file to create under /etc/tmpfiles.d/
+# mount_point: Path where the tmpfs must be mounted
+# uid: mount_point's user owner
+# gid: mount_point's group owner
+# mode: mount_point's access permissions
+# size: tmpfs' size
+#
+- name: Configure a new temporary directory
+  copy:
+    dest: "{{ config_file }}"
+    content: "D {{ mount_point }} 4777 root root -"
+    owner: "{{ uid }}"
+    group: "{{ gid }}"
+    mode: "{{ mode }}"
+  notify: Create_the_new_temporary_directory
+- name: mount the new tmpfs
+  mount:
+    src: tmpfs
+    path: "{{ mount_point }}"
+    fstype: tmpfs
+    opts: size={{ size }}
+    state: mounted

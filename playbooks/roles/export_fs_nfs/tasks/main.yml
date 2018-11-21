@@ -1,0 +1,50 @@
+---
+#
+# Required variables:
+# mount_point:
+#
+# Optional variables:
+# proxy_url: Proxy URL to reach the Internet
+#
+- name: Ensure nfs-utils is installed
+  package:
+    name: nfs-utils
+    state: present
+  environment:
+    http_proxy: "{{ proxy_url | default('') }}"
+    https_proxy: "{{ proxy_url | default('') }}"
+    ftp_proxy: "{{ proxy_url | default('') }}"
+    socks_proxy: "{{ proxy_url | default('') }}"
+    HTTP_PROXY: "{{ proxy_url | default('') }}"
+    HTTPS_PROXY: "{{ proxy_url | default('') }}"
+    FTP_PROXY: "{{ proxy_url | default('') }}"
+    SOCKS_PROXY: "{{ proxy_url | default('') }}"
+- name: Check if is already exported
+  command: "grep -c {{ mount_point }} /etc/exports"
+  changed_when: false
+  failed_when: false
+  register: already_exported
+- name: Get a feasonable fsid
+  set_fact:
+    fsid: "{{ lookup('pipe', 'cat /proc/sys/kernel/random/uuid') }}"
+  when: already_exported.rc == 1
+- name: Add the export configuration
+  lineinfile:
+    dest: /etc/exports
+    line: "{{ mount_point }} *(rw,fsid={{ fsid }},no_root_squash)"
+    regexp: "^.*{{ mount_point }}.*$"
+    state: present
+  when: already_exported.rc == 1
+  notify: reload_nfs_server
+- name: Enable the nfs-server related services
+  service:
+    name: "{{ pkg_loop }}"
+    state: started
+    enabled: true
+  loop:
+    - nfs-utils
+    - rpcbind
+    - nfs-mountd
+  loop_control:
+    loop_var: pkg_loop
+  notify: reload_nfs_server
