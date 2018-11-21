@@ -1,12 +1,12 @@
 ---
-- name: Create shared tmpfs and mount at clients
+- name: Create shared tmpfs and NFS export
   hosts: master
   remote_user: root
   gather_facts: false
   become: false
   vars:
     tmpfs_path: "/run/jenkins_locks"
-    proxy: "http://192.168.122.1:13128"
+    proxy: "{{ http_proxy | default('') }}"
   roles:
     - role: create_tmpfs
       config_file: "/etc/tmpfiles.d/jenkins_locks.conf"
@@ -19,14 +19,14 @@
       proxy_url: "{{ proxy | default('') }}"
       mount_point: "{{ tmpfs_path }}"
 
-- name: Create shared tmpfs and mount at clients
+- name: Mount NFS share at clients
   hosts: slaves
   remote_user: root
   gather_facts: false
   become: false
   vars:
     tmpfs_path: "/run/jenkins_locks"
-    proxy: "{{ proxy | default('') }}"
+    proxy: "{{ http_proxy | default('') }}"
   roles:
     - role: mount_fs_nfs
       server: "{{ groups['master'][0] }}"
