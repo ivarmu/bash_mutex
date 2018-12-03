@@ -4,18 +4,18 @@ bash_mutex
 This script is intended to execute commands from the bash in a mutex-like way.
 ```
 # 
-# Usage: bash_mutex.sh [-n <max_queue_length>] "command to run in a semaphore-like manner"
+# Usage: bash_mutex.sh <-m 'mutex_name'> [-s] [-r] [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time>] "command to run in a semaphore-like manner"
 #
 # Example: bash_mutex.sh -m 'echo' 'echo $$ >> /tmp/test'"
 # Example: bash_mutex.sh -m 'echo2' -n 3 'echo $$ >> /tmp/test'"
 # Example: bash_mutex.sh -m 'mutex' -ml 60 'echo $$ >> /tmp/test'"
 # Example: bash_mutex.sh -m 'mutex2' -mw 30 'echo $$ >> /tmp/test'"
 # Example: bash_mutex.sh -m 'label1' -n 3 -ml 60 -mw 30 'echo $$ >> /tmp/test'"
+# Example: bash_mutex.sh -m 'get_static_mutex' -s
+# Example: bash_mutex.sh -m 'get_static_mutex' -s -mw 30
+# Example: bash_mutex.sh -m 'release_static_mutex' -r
 #
-# Error codes:"
-#   0: no errors"
-#   1: Missing parameters"
-#   2: Missing required parameter '-m'"
-#   3: SIGALRM received. The command is killed"
+# NOTE: -s and -r options are used to set and release the mutexes manually for long running or multi-command mutex requirements. In that cases,
+# the calling process is the responsible of the correct muttex release as <max_lock_time> is completely ignored.
 #
 ```
