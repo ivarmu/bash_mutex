@@ -3,7 +3,7 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 # 
-# Usage: bash_mutex.sh <-m 'mutex_name'> [-s] [-r] [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time>] "command to run in a semaphore-like manner"
+# Usage: bash_mutex.sh <-m 'mutex_name'> [-s] [-r] [-p] [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time>] "command to run in a semaphore-like manner"
 #
 # Example: bash_mutex.sh -m 'echo' 'echo $$ >> /tmp/test'"
 # Example: bash_mutex.sh -m 'echo2' -n 3 'echo $$ >> /tmp/test'"
@@ -12,16 +12,19 @@
 # Example: bash_mutex.sh -m 'label1' -n 3 -ml 60 -mw 30 'echo $$ >> /tmp/test'"
 # Example: bash_mutex.sh -m 'get_static_mutex' -s
 # Example: bash_mutex.sh -m 'get_static_mutex' -s -mw 30
+# Example: bash_mutex.sh -m 'program_end_of_static_mutex' -p -ml 30 &
 # Example: bash_mutex.sh -m 'release_static_mutex' -r
 #
-# NOTE: -s and -r options are used to set and release the mutexes manually for long running or multi-command mutex requirements. In that cases,
-# the calling process is the responsible of the correct muttex release as <max_lock_time> is completely ignored.
+# NOTE: '-s', '-p' and '-r' options are used to set and release the mutexes manually for long running or multi-command mutex requirements.
+# In that cases, the calling process is the responsible of the correct muttex release as <max_lock_time> is completely ignored.
+#
+# NOTE: '-p' may be usually executed in background (&), as it only programs the lock auto-release (don't execute any command).
 #
 
 # Check for the input parameters
 if [ $# -eq 0 ]; then
   echo ""
-  echo "Usage: bash_mutex.sh <-m 'mutex_name'> [-s] [-r] [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time>] \"command to run in a semaphore-like manner\""
+  echo "Usage: bash_mutex.sh <-m 'mutex_name'> [-s] [-p] [-r] [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time>] \"command to run in a semaphore-like manner\""
   echo ""
   echo "Example: bash_mutex.sh -m 'echo' 'echo $$ >> /tmp/test'"
   echo "Example: bash_mutex.sh -m 'echo2' -n 3 'echo $$ >> /tmp/test'"
@@ -30,10 +33,13 @@ if [ $# -eq 0 ]; then
   echo "Example: bash_mutex.sh -m 'label1' -n 3 -ml 60 -mw 30 'echo $$ >> /tmp/test'"
   echo "Example: bash_mutex.sh -m 'get_static_mutex' -s"
   echo "Example: bash_mutex.sh -m 'get_static_mutex' -s -n 3 -mw 30"
+  echo "Example: bash_mutex.sh -m 'program_end_of_static_mutex' -p -ml 30"
   echo "Example: bash_mutex.sh -m 'release_static_mutex' -r"
   echo ""
-  echo "NOTE: -s and -r options are used to set and release the mutexes manually for long running or multi-command mutex requirements. In that cases,"
-  echo "the calling process is the responsible of the correct muttex release as <max_lock_time> is completely ignored."
+  echo "NOTE: '-s', '-p' and '-r' options are used to set and release the mutexes manually for long running or multi-command mutex requirements."
+  echo "In that cases, the calling process is the responsible of the correct muttex release as <max_lock_time> is completely ignored."
+  echo ""
+  echo "NOTE: '-p' may be usually executed in background (&), as it only programs the lock auto-release (don't execute any command)."
   echo ""
   echo "Error codes:"
   echo "  0: no errors"
@@ -61,6 +67,7 @@ _MAX_WAIT_TIME=60
 # By default, no limit on number of processes waiting for the mutex.
 let _MAX_QUEUE_LEN=0
 _AUTO_UNLOCK_ENABLED=1
+_PROGRAM_RELEASE=0
 _RUN_RELEASE=0
 
 # Parse arguments
@@ -92,6 +99,10 @@ while [ "${1#-}" != "${1}" ]; do
           ;;
     "-s")
           _AUTO_UNLOCK_ENABLED=0
+          shift
+          ;;
+    "-p")
+          _PROGRAM_RELEASE=1
           shift
           ;;
     "-r")
@@ -206,6 +217,10 @@ if [ ${_AUTO_UNLOCK_ENABLED} -eq 1 ]; then
   # Program auto-unlock
   (sleep ${_SUM_LOCK_TIME}; kill -SIGALRM $$ &>/dev/null; exit 0)&
   _ALARM_GENERATOR_PID=$!
+  if [ ${_PROGRAM_RELEASE} -eq 1 ]; then
+    wait ${_ALARM_GENERATOR_PID}
+    exit 0
+  fi
 fi
 
 # Get the lock
