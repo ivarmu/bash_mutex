@@ -206,6 +206,7 @@ if [ ${_AUTO_UNLOCK_ENABLED} -eq 1 ]; then
   # Program auto-unlock
   (sleep ${_SUM_LOCK_TIME}; kill -SIGALRM $$ &>/dev/null; exit 0)&
   _ALARM_GENERATOR_PID=$!
+fi
 
   # Get the lock
   lock
@@ -217,12 +218,10 @@ if [ ${_AUTO_UNLOCK_ENABLED} -eq 1 ]; then
   _COMMAND=$!
   wait ${_COMMAND}
   
+if [ ${_AUTO_UNLOCK_ENABLED} -eq 1 ]; then
   # MAIN process finished
   # Release the lock and exit
   unlock
-else
-  # Get the lock
-  lock
 fi
 
 clean_exit 0
