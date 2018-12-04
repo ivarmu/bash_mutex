@@ -44,7 +44,7 @@ if [ $# -eq 0 ]; then
   echo "Environment variables:"
   echo "  LOCK_PATH: Indicates where to create the mutexes (default: /var/tmp/)"
   echo ""
-  exit 1
+  exit 101
 fi
 
 ### Variables
@@ -70,7 +70,7 @@ if [ "${1}" == "-m" ]; then
   shift
 else
   echo "You must give a name for the mutex (-m)"
-  exit 2
+  exit 102
 fi
 
 while [ "${1#-}" != "${1}" ]; do
@@ -142,13 +142,13 @@ function lock {
   if [ ${_MAX_QUEUE_LEN} -ne 0 ]; then
     if [ $(ls -d ${_LOCK_DIR}_* | wc -l) -gt ${_MAX_QUEUE_LEN} ]; then
       echo "Max queue length has been reached. No command is executed"
-      clean_exit 4
+      clean_exit 104
     fi
   fi
   while ! mkdir ${_LOCK_DIR} &>/dev/null; do
     if [ ${_counter} -gt ${_MAX_WAIT_TIME} ]; then
       echo "Max wait time exhausted... No command is executed"
-      clean_exit 5
+      clean_exit 105
       break
     fi
     let _counter+=1
@@ -185,7 +185,7 @@ function unlock {
 function unlock_signal {
   echo "handling the received signal: ${1}"
   unlock ${1}
-  exit 3
+  exit 103
 }
 
 # MAIN
@@ -193,7 +193,7 @@ function unlock_signal {
 # If called with -r we only need to release the lock
 if [ ${_RUN_RELEASE} -eq 1 ]; then
   rmdir ${_LOCK_DIR} &> /dev/null
-  exit 0
+  clean_exit 0
 fi
 
 trap 'unlock_signal ALRM' ALRM
