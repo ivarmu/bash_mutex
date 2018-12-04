@@ -113,11 +113,6 @@ let _SUM_LOCK_TIME=_MAX_LOCK_TIME+_MAX_WAIT_TIME
 
 ### Functions
 
-function release {
-  rmdir ${_LOCK_DIR}
-  exit 0
-}
-
 function clean_exit {
   # remove us from the queue
   rmdir ${_LOCK_DIR}_$$ &>/dev/null
@@ -133,6 +128,11 @@ function clean_exit {
   exit ${1:-0}
 }
 
+function release {
+  rmdir ${_LOCK_DIR}
+  clean_exit 0
+}
+
 # Function to lock
 function lock {
   let _counter=1
@@ -142,13 +142,13 @@ function lock {
   if [ ${_MAX_QUEUE_LEN} -ne 0 ]; then
     if [ $(ls -d ${_LOCK_DIR}_* | wc -l) -gt ${_MAX_QUEUE_LEN} ]; then
       echo "Max queue length has been reached. No command is executed"
-      clean_exit
+      clean_exit 4
     fi
   fi
   while ! mkdir ${_LOCK_DIR} &>/dev/null; do
     if [ ${_counter} -gt ${_MAX_WAIT_TIME} ]; then
       echo "Max wait time exhausted... No command is executed"
-      clean_exit
+      clean_exit 5
       break
     fi
     let _counter+=1
@@ -208,23 +208,24 @@ if [ ${_AUTO_UNLOCK_ENABLED} -eq 1 ]; then
   _ALARM_GENERATOR_PID=$!
 fi
 
-  # Get the lock
-  lock
+# Get the lock
+lock
 
-  # MAIN process
-  echo "executing the given command: $@"
-  date
-  eval $@ &
-  _COMMAND=$!
-  wait ${_COMMAND}
+# MAIN process
+echo "executing the given command: $@"
+date
+eval $@ &
+_COMMAND=$!
+wait ${_COMMAND}
+result=$?
   
 if [ ${_AUTO_UNLOCK_ENABLED} -eq 1 ]; then
   # MAIN process finished
   # Release the lock and exit
-  unlock
+  unlock SIGTERM
 fi
 
-clean_exit 0
+clean_exit ${result}
 
 # Never reached exit
-exit 0
+exit 100
