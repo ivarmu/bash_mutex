@@ -139,11 +139,6 @@ function clean_exit {
   exit ${1:-0}
 }
 
-function release {
-  rmdir ${_LOCK_DIR}
-  clean_exit 0
-}
-
 # Function to lock
 function lock {
   let _counter=1
@@ -165,13 +160,14 @@ function lock {
     let _counter+=1
     sleep 1
   done
+  echo "$(hostname) - PID: $$" > ${_LOCK_DIR}/info.txt
 }
 
 # Function to unlock 
 function unlock {
   # first of all, get out of the queue to let another process to get the slot
   rmdir ${_LOCK_DIR}_$$ &>/dev/null
-  rmdir ${_LOCK_DIR} &>/dev/null
+  rm -rf ${_LOCK_DIR} &>/dev/null
   # Can remove the auto-unlock timer and all it's childs
   if [ ! -z "${_ALARM_GENERATOR_PID}" ]; then
     _procs="$(pstree -p ${_ALARM_GENERATOR_PID} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
@@ -218,6 +214,7 @@ if [ ${_AUTO_UNLOCK_ENABLED} -eq 1 ]; then
   (sleep ${_SUM_LOCK_TIME}; kill -SIGALRM $$ &>/dev/null; exit 0)&
   _ALARM_GENERATOR_PID=$!
   if [ ${_PROGRAM_RELEASE} -eq 1 ]; then
+    echo "$(hostname) - PID: $$" > ${_LOCK_DIR}/info.txt
     wait ${_ALARM_GENERATOR_PID}
     exit 0
   fi
