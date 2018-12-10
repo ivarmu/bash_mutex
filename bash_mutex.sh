@@ -24,7 +24,7 @@
 # Check for the input parameters
 if [ $# -eq 0 ]; then
   echo ""
-  echo "Usage: bash_mutex.sh <-m 'mutex_name'> [-s] [-p] [-r] [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time>] \"command to run in a semaphore-like manner\""
+  echo "Usage: bash_mutex.sh <-m 'mutex_name'> [-s] [-r] [-p] [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time>] \"command to run in a semaphore-like manner\""
   echo ""
   echo "Example: bash_mutex.sh -m 'echo' 'echo $$ >> /tmp/test'"
   echo "Example: bash_mutex.sh -m 'echo2' -n 3 'echo $$ >> /tmp/test'"
