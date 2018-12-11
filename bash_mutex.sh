@@ -199,7 +199,7 @@ function unlock_signal {
 
 # If called with -r we only need to release the lock
 if [ ${_RUN_RELEASE} -eq 1 ]; then
-  rmdir ${_LOCK_DIR} &> /dev/null
+  rm -rf ${_LOCK_DIR} &> /dev/null
   clean_exit 0
 fi
 
