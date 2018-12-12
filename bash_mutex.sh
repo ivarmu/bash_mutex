@@ -153,7 +153,7 @@ function lock {
   fi
   while ! mkdir ${_LOCK_DIR} &>/dev/null; do
     if [ ${_counter} -gt ${_MAX_WAIT_TIME} ]; then
-      echo "Max wait time exhausted... No command is executed"
+      echo "Could'nt get the lock: timed out... No command is executed"
       clean_exit 105
       break
     fi
