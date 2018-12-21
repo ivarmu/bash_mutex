@@ -127,15 +127,14 @@ let _SUM_LOCK_TIME=_MAX_LOCK_TIME+_MAX_WAIT_TIME
 function clean_exit {
   # remove us from the queue
   rmdir ${_LOCK_DIR}_$$ &>/dev/null
-  # Can remove the auto-unlock timer and all it's childs
-  if [ ! -z "${_ALARM_GENERATOR_PID}" ]; then
-    _procs="$(pstree -p ${_ALARM_GENERATOR_PID} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
-    if [ ! -z "${_procs}" ]; then
-      for _pid in ${_procs}; do
-        kill -SIGTERM ${_pid} &>/dev/null
-      done
+
+  # if we got the lock, release it
+  if [ -f ${_LOCK_DIR}/info.txt ]; then
+    if [ ! -z "$(grep $$ ${_LOCK_DIR}/info.txt)" ]; then
+      unlock ${1:-0}
     fi
   fi
+
   exit ${1:-0}
 }
 
@@ -160,7 +159,7 @@ function lock {
     let _counter+=1
     sleep 1
   done
-  echo "$(hostname) - PID: $$" > ${_LOCK_DIR}/info.txt
+  echo "$(hostname) - PID: $$" > ${_LOCK_DIR}/info.txt && sync
 }
 
 # Function to unlock 
@@ -204,17 +203,17 @@ if [ ${_RUN_RELEASE} -eq 1 ]; then
 fi
 
 trap 'unlock_signal ALRM' ALRM
-trap 'clean_exit INT' INT
-trap 'clean_exit TERM' TERM
-trap 'clean_exit HUP' HUP
-trap 'clean_exit ABRT' HUP
+trap 'clean_exit 2' INT
+trap 'clean_exit 15' TERM
+trap 'clean_exit 1' HUP
+trap 'clean_exit 6' ABRT
 
 if [ ${_AUTO_UNLOCK_ENABLED} -eq 1 ]; then
   # Program auto-unlock
   (sleep ${_SUM_LOCK_TIME}; kill -SIGALRM $$ &>/dev/null; exit 0)&
   _ALARM_GENERATOR_PID=$!
   if [ ${_PROGRAM_RELEASE} -eq 1 ]; then
-    echo "$(hostname) - PID: $$" > ${_LOCK_DIR}/info.txt
+    echo "$(hostname) - PID: $$" > ${_LOCK_DIR}/info.txt && sync
     wait ${_ALARM_GENERATOR_PID}
     exit 0
   fi
@@ -230,14 +229,13 @@ eval $@ &
 _COMMAND=$!
 wait ${_COMMAND}
 result=$?
-  
+
+# MAIN process finished
 if [ ${_AUTO_UNLOCK_ENABLED} -eq 1 ]; then
-  # MAIN process finished
   # Release the lock and exit
-  unlock SIGTERM
+  clean_exit ${result}
 fi
 
-clean_exit ${result}
-
-# Never reached exit
+# Exit without release the lock
 exit 100
+
