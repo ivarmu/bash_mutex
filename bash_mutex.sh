@@ -52,7 +52,7 @@ _MAX_WAIT_TIME=60
 let _MAX_QUEUE_LEN=0
 
 # Parse arguments
-if [ "${1}" == "-m" ]; then
+if [ "${1}" == "-m" -a "${2}" == "${2#-}" ]; then
   _MUTEX_NAME="${2//[[:space:]]/_}"
   shift
   shift

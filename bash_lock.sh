@@ -63,7 +63,7 @@ _PROGRAM_RELEASE=0
 _RUN_RELEASE=0
 
 # Parse arguments
-if [ "${1}" == "-m" ]; then
+if [ "${1}" == "-m" -a "${2}" == "${2#-}" ]; then
   _MUTEX_NAME="${2//[[:space:]]/_}"
   shift
   shift
