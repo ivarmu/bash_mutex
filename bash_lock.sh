@@ -167,7 +167,9 @@ function lock {
     let _counter+=1
     sleep 1
   done
+  # Write some usefull (debug) information to info.txt file
   echo "$(hostname) - PID: $$" > ${_LOCK_DIR}/info.txt && sync
+  env | grep "BASH_MUTEX_" >> ${_LOCK_DIR}/info.txt && sync
 #  # We are not on the queue, we got the lock
 #  queue_out
 }
