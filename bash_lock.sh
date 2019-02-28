@@ -168,8 +168,15 @@ function lock {
     sleep 1
   done
   # Write some usefull (debug) information to info.txt file
-  echo "$(hostname) - PID: $$" > ${_LOCK_DIR}/info.txt && sync
-  env | grep "BASH_MUTEX_" >> ${_LOCK_DIR}/info.txt && sync
+  cat > ${_LOCK_DIR}/info.txt <<EOF
+$(hostname) - PID: $$
+$(date)
+_Max_Lock_Time: ${_MAX_LOCK_TIME}
+- Variables de entorno:
+
+$(env | grep "BASH_MUTEX")
+EOF
+  sync
 #  # We are not on the queue, we got the lock
 #  queue_out
 }
@@ -223,7 +230,16 @@ elif [ ${_PROGRAM_RELEASE} -eq 1 ]; then
   # If called with -p we program auto-unlock
   (sleep ${_SUM_LOCK_TIME}; kill -SIGALRM $$ &>/dev/null; exit 0)&
   _ALARM_GENERATOR_PID=$!
-  echo "$(hostname) - PID: $$" > ${_LOCK_DIR}/info.txt && sync
+  # Write some usefull (debug) information to info.txt file
+  cat > ${_LOCK_DIR}/info.txt <<EOF
+$(hostname) - PID: $$
+$(date)
+_Max_Lock_Time: ${_MAX_LOCK_TIME}
+- Variables de entorno:
+
+$(env | grep "BASH_MUTEX")
+EOF
+  sync
   wait ${_ALARM_GENERATOR_PID}
   # Exit assuring the lock has been released
   unlock 0 
