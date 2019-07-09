@@ -2,7 +2,7 @@
 # (c) 2018, Ivan Aragones Muniesa <iaragone@redhat.com>
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-# 
+#
 # Usage: bash_lock.sh <-m 'mutex_name'> [-s] [-r] [-p] [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time>]
 #
 # Example: bash_lock.sh -m 'get_static_mutex' -s
@@ -125,7 +125,7 @@ function clean_exit {
   # if we got the lock, release it
   if [ -f ${_LOCK_DIR}/info.txt ]; then
     if [ ! -z "$(grep $$ ${_LOCK_DIR}/info.txt)" ]; then
-      unlock ${1:-0}
+      unlock
     fi
   fi
 
@@ -181,7 +181,7 @@ EOF
 #  queue_out
 }
 
-# Function to unlock 
+# Function to unlock
 function unlock {
   # first of all, get out of the queue to let another process to get the slot
   rmdir ${_LOCK_DIR}_$$ &>/dev/null
@@ -190,7 +190,7 @@ function unlock {
     _procs="$(pstree -p ${_ALARM_GENERATOR_PID} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
     if [ ! -z "${_procs}" ]; then
       for _pid in ${_procs}; do
-        kill -${1} ${_pid} &>/dev/null
+        kill -${1:-15} ${_pid} &>/dev/null
       done
     fi
   fi
@@ -199,7 +199,7 @@ function unlock {
     _procs="$(pstree -p ${_COMMAND} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
     if [ ! -z "${_procs}" ]; then
       for _pid in ${_procs}; do
-        kill -${1} ${_pid} &>/dev/null
+        kill -${1:-15} ${_pid} &>/dev/null
       done
     fi
   fi
@@ -242,7 +242,7 @@ EOF
   sync
   wait ${_ALARM_GENERATOR_PID}
   # Exit assuring the lock has been released
-  unlock 0 
+  unlock
   exit 0
 elif [ ${_ONLY_GET_LOCK} ]; then
   # If called with -s we try to get the lock

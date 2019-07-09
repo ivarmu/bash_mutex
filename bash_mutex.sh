@@ -2,7 +2,7 @@
 # (c) 2018, Ivan Aragones Muniesa <iaragone@redhat.com>
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
-# 
+#
 # Usage: bash_mutex.sh <-m 'mutex_name'> [-s] [-r] [-p] [-n <max_queue_length>] [-ml <max_lock_time>] [-mw <max_wait_time>] "command to run in a semaphore-like manner"
 #
 # Example: bash_mutex.sh -m 'echo' 'echo $$ >> /tmp/test'"
@@ -99,7 +99,7 @@ function clean_exit {
   # if we got the lock, release it
   if [ -f ${_LOCK_DIR}/info.txt ]; then
     if [ ! -z "$(grep $$ ${_LOCK_DIR}/info.txt)" ]; then
-      unlock ${1:-0}
+      unlock
     fi
   fi
 
@@ -157,14 +157,14 @@ EOF
 #  queue_out
 }
 
-# Function to unlock 
+# Function to unlock
 function unlock {
   # Can remove the auto-unlock timer and all it's childs
   if [ ! -z "${_ALARM_GENERATOR_PID}" ]; then
     _procs="$(pstree -p ${_ALARM_GENERATOR_PID} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
     if [ ! -z "${_procs}" ]; then
       for _pid in ${_procs}; do
-        kill -${1} ${_pid} &>/dev/null
+        kill -${1:-15} ${_pid} &>/dev/null
       done
     fi
   fi
@@ -173,7 +173,7 @@ function unlock {
     _procs="$(pstree -p ${_COMMAND} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
     if [ ! -z "${_procs}" ]; then
       for _pid in ${_procs}; do
-        kill -${1} ${_pid} &>/dev/null
+        kill -${1:-15} ${_pid} &>/dev/null
       done
     fi
   fi
