@@ -103,6 +103,8 @@ function clean_exit {
     fi
   fi
 
+  kill_processes
+
   exit ${1:-0}
 }
 
@@ -157,8 +159,7 @@ EOF
 #  queue_out
 }
 
-# Function to unlock
-function unlock {
+function kill_processes {
   # Can remove the auto-unlock timer and all it's childs
   if [ ! -z "${_ALARM_GENERATOR_PID}" ]; then
     _procs="$(pstree -p ${_ALARM_GENERATOR_PID} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
@@ -177,6 +178,12 @@ function unlock {
       done
     fi
   fi
+}
+
+# Function to unlock
+function unlock {
+  # kill the processes
+  kill_processes
   # free the lock
   rm -rf ${_LOCK_DIR} &>/dev/null
 }
@@ -186,7 +193,7 @@ function unlock_signal {
   echo "handling the received signal: ${1}"
   # first of all, get out of the queue to let another process to get the slot
   queue_out
-  unlock ${1}
+  unlock
   exit 103
 }
 
