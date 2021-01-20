@@ -53,9 +53,9 @@ _MUTEX_PREFIX="bash_lock_"
 _MUTEX_NAME=""
 
 # Maximum amount of time to maintain the lock (in seconds)
-_MAX_LOCK_TIME=5
+_MAX_LOCK_TIME=0
 # Maximum time we'll wait for the lock (in seconds)
-_MAX_WAIT_TIME=60
+_MAX_WAIT_TIME=0
 # By default, no limit on number of processes waiting for the mutex.
 let _MAX_QUEUE_LEN=0
 _ONLY_GET_LOCK=0
@@ -113,8 +113,8 @@ echo "_MAX_LOCK_TIME = ${_MAX_LOCK_TIME}"
 echo "_MAX_WAIT_TIME = ${_MAX_WAIT_TIME}"
 echo "_MAX_QUEUE_LEN = ${_MAX_QUEUE_LEN}"
 
-# Sum the time to wait for (get the lock + being locked)
-let _SUM_LOCK_TIME=_MAX_LOCK_TIME+_MAX_WAIT_TIME
+# Sum the time to wait for (get the lock + being locked, added 5 seconds to let the kill )
+let _SUM_LOCK_TIME=_MAX_LOCK_TIME+_MAX_WAIT_TIME+5
 
 ### Functions
 
@@ -174,7 +174,7 @@ $(date)
 _Max_Lock_Time: ${_MAX_LOCK_TIME}
 - Variables de entorno:
 
-$(env | grep "BASH_MUTEX")
+$(env | grep "BASH_LOCK")
 EOF
   sync
 #  # We are not on the queue, we got the lock
@@ -183,27 +183,9 @@ EOF
 
 # Function to unlock
 function unlock {
-  # first of all, get out of the queue to let another process to get the slot
+  # get out of the queue to let another process to get the slot
   rmdir ${_LOCK_DIR}_$$ &>/dev/null
-  # Can remove the auto-unlock timer and all it's childs
-  if [ ! -z "${_ALARM_GENERATOR_PID}" ]; then
-    _procs="$(pstree -p ${_ALARM_GENERATOR_PID} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
-    if [ ! -z "${_procs}" ]; then
-      for _pid in ${_procs}; do
-        kill -${1:-15} ${_pid} &>/dev/null
-      done
-    fi
-  fi
-  # Can remove the running process and all it's childs
-  if [ ! -z "${_COMMAND}" ]; then
-    _procs="$(pstree -p ${_COMMAND} | grep -Po '[^[:digit:]]*\K[[:digit:]]*' | sort -nr)"
-    if [ ! -z "${_procs}" ]; then
-      for _pid in ${_procs}; do
-        kill -${1:-15} ${_pid} &>/dev/null
-      done
-    fi
-  fi
-  # finally, release the lock
+  # release the lock
   rm -rf ${_LOCK_DIR} &>/dev/null
 }
 
@@ -227,9 +209,6 @@ if [ ${_RUN_RELEASE} -eq 1 ]; then
   rm -rf ${_LOCK_DIR} &> /dev/null
   clean_exit 0
 elif [ ${_PROGRAM_RELEASE} -eq 1 ]; then
-  # If called with -p we program auto-unlock
-  (sleep ${_SUM_LOCK_TIME}; kill -SIGALRM $$ &>/dev/null; exit 0)&
-  _ALARM_GENERATOR_PID=$!
   # Write some usefull (debug) information to info.txt file
   cat > ${_LOCK_DIR}/info.txt <<EOF
 $(hostname) - PID: $$
@@ -237,10 +216,10 @@ $(date)
 _Max_Lock_Time: ${_MAX_LOCK_TIME}
 - Variables de entorno:
 
-$(env | grep "BASH_MUTEX")
+$(env | grep "BASH_LOCK")
 EOF
   sync
-  wait ${_ALARM_GENERATOR_PID}
+  sleep ${_SUM_LOCK_TIME}
   # Exit assuring the lock has been released
   unlock
   exit 0
